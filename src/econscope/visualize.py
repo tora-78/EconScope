@@ -1,5 +1,9 @@
 import matplotlib.pyplot as plt
-from indicators import GDP, POPULATION, Indicator, get_indicator
+
+try:
+    from .indicators import GDP, POPULATION, Indicator, get_indicator
+except ImportError:  # Supports running source files directly during development.
+    from indicators import GDP, POPULATION, Indicator, get_indicator
 
 
 def plot_indicator(country: str, indicator: Indicator) -> None:

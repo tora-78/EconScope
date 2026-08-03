@@ -1,5 +1,6 @@
 """Offline tests for EconScope data retrieval, indicators, and charting."""
 
+import importlib
 import os
 import sys
 import unittest
@@ -7,9 +8,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 os.environ.setdefault("MPLCONFIGDIR", "/tmp/econscope-matplotlib")
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src" / "econscope"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 
-from econscope import api, indicators, main, visualize
+from econscope import api, indicators, visualize
+
+main = importlib.import_module("econscope.main")
 
 
 class IndicatorDataTests(unittest.TestCase):
@@ -90,7 +93,7 @@ class IndicatorConfigurationTests(unittest.TestCase):
         self.assertEqual(indicators.POPULATION.code, "SP.POP.TOTL")
         self.assertEqual(indicators.INDICATORS["2"], indicators.POPULATION)
 
-    @patch("indicators.get_indicator_data")
+    @patch.object(indicators, "get_indicator_data")
     def test_get_gdp_uses_gdp_metadata(self, mock_get_indicator_data) -> None:
         mock_get_indicator_data.return_value = api._indicator_dataframe(
             ["2024"], [1.0], "GDP"
@@ -109,8 +112,8 @@ class UserInterfaceTests(unittest.TestCase):
         self.assertEqual(selected, indicators.POPULATION)
         self.assertEqual(mock_input.call_count, 2)
 
-    @patch("visualize.plt.show")
-    @patch("visualize.get_indicator")
+    @patch.object(visualize.plt, "show")
+    @patch.object(visualize, "get_indicator")
     def test_population_chart_uses_population_column(self, mock_get_indicator, mock_show) -> None:
         mock_get_indicator.return_value = api._indicator_dataframe(
             ["2023", "2024"], [9_950_000, 10_200_000], "Population"

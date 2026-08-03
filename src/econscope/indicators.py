@@ -4,7 +4,10 @@ from dataclasses import dataclass
 
 import pandas as pd
 
-from api import get_indicator_data
+try:
+    from .api import get_indicator_data
+except ImportError:  # Supports running source files directly during development.
+    from api import get_indicator_data
 
 
 @dataclass(frozen=True)

@@ -1,2 +1,5 @@
-def main() -> None:
-    print("Hello from econscope!")
+"""EconScope package."""
+
+from .main import main
+
+__all__ = ["main"]

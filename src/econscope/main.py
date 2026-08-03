@@ -1,7 +1,13 @@
 import pandas as pd
-from api import DataSourceError, get_country_list
-from indicators import INDICATORS, Indicator
-from visualize import plot_indicator
+
+try:
+    from .api import DataSourceError, get_country_list
+    from .indicators import INDICATORS, Indicator
+    from .visualize import plot_indicator
+except ImportError:  # Supports running this file directly during development.
+    from api import DataSourceError, get_country_list
+    from indicators import INDICATORS, Indicator
+    from visualize import plot_indicator
 
 VERSION = "0.1.0"
 
