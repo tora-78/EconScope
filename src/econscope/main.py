@@ -1,5 +1,5 @@
 import pandas as pd
-from api import WorldBankAPIError, get_country_list
+from api import DataSourceError, get_country_list
 from visualize import plot_gdp
 
 VERSION = "0.1.0"
@@ -80,14 +80,14 @@ def main():
             break
         try:
             countries = get_country_list()
-        except WorldBankAPIError as error:
+        except DataSourceError as error:
             print(f"\nUnable to load the country list: {error}\n")
             continue
         country = select_country(countries, region)
         print("\nDownloading data and generating the GDP chart...")
         try:
             plot_gdp(country)
-        except WorldBankAPIError as error:
+        except DataSourceError as error:
             print(f"\nUnable to generate the GDP chart: {error}\n")
             continue
         print("\n✓ GDP trend chart generated successfully!")

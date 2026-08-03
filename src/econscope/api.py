@@ -3,12 +3,20 @@ import requests
 import time
 
 
-class WorldBankAPIError(RuntimeError):
+class DataSourceError(RuntimeError):
+    """Raised when an economic-data source cannot be reached or parsed."""
+
+
+class WorldBankAPIError(DataSourceError):
     """Raised when data cannot be retrieved from the World Bank API."""
 
 
-def _get_json(url: str) -> list:
-    """Fetch JSON from the World Bank API, retrying temporary server failures."""
+def _get_json(
+    url: str,
+    source_name: str,
+    error_type: type[DataSourceError] = DataSourceError,
+) -> object:
+    """Fetch JSON from a data source, retrying temporary server failures."""
     last_error: Exception | None = None
 
     for attempt in range(3):
@@ -24,35 +32,71 @@ def _get_json(url: str) -> list:
         except (requests.RequestException, ValueError) as error:
             last_error = error
 
-    raise WorldBankAPIError(
-        "The World Bank API is temporarily unavailable for this request. "
+    raise error_type(
+        f"{source_name} is temporarily unavailable for this request. "
         "Please try again later."
     ) from last_error
 
 
-def get_gdp(country: str) -> pd.DataFrame:
+def _gdp_dataframe(years: list[object], values: list[object]) -> pd.DataFrame:
+    """Convert aligned year and GDP-value lists to the app's common format."""
+    df = pd.DataFrame(
+        zip(years, values, strict=True), columns=["year", "GDP"]
+    )
+    # DBnomics may encode missing observations as strings such as "NA".
+    # Matplotlib requires one numeric dtype rather than a mix of strings/floats.
+    df["year"] = pd.to_numeric(df["year"], errors="coerce")
+    df["GDP"] = pd.to_numeric(df["GDP"], errors="coerce")
+    return df.dropna(subset=["year", "GDP"]).astype({"year": int}).sort_values("year")
+
+
+def get_gdp_from_world_bank(country: str) -> pd.DataFrame:
     """Download GDP time series from the World Bank API."""
     url = (
     f"https://api.worldbank.org/v2/country/"
     f"{country}/indicator/NY.GDP.MKTP.CD"
     "?format=json&per_page=100"
     )
-    json_data = _get_json(url)
+    json_data = _get_json(url, "The World Bank API", WorldBankAPIError)
     if len(json_data) < 2 or not isinstance(json_data[1], list):
         raise WorldBankAPIError(f"No GDP data is available for country code {country}.")
-    years = []
-    gdps = []
-    for record in json_data[1]:
-        if record["value"] is None:
-            continue
-        years.append(int(record["date"]))
-        gdps.append(record["value"])
+    years = [record["date"] for record in json_data[1]]
+    gdps = [record["value"] for record in json_data[1]]
+    return _gdp_dataframe(years, gdps)
 
-    df = pd.DataFrame({
-        "year": years,
-        "GDP": gdps
-    })
-    return df
+
+def get_gdp_from_dbnomics(country: str) -> pd.DataFrame:
+    """Download the same WDI GDP series through DBnomics as a fallback."""
+    url = (
+        "https://api.db.nomics.world/v22/series/WB/WDI/"
+        f"A-NY.GDP.MKTP.CD-{country}?observations=1"
+    )
+    json_data = _get_json(url, "The DBnomics API")
+
+    try:
+        series = json_data["series"]["docs"][0]
+        years = series["period"]
+        gdps = series["value"]
+    except (KeyError, IndexError, TypeError) as error:
+        raise DataSourceError(
+            f"No fallback GDP data is available for country code {country}."
+        ) from error
+
+    return _gdp_dataframe(years, gdps)
+
+
+def get_gdp(country: str) -> pd.DataFrame:
+    """Download GDP, falling back to DBnomics if the World Bank API fails."""
+    try:
+        return get_gdp_from_world_bank(country)
+    except WorldBankAPIError as world_bank_error:
+        try:
+            return get_gdp_from_dbnomics(country)
+        except DataSourceError as dbnomics_error:
+            raise DataSourceError(
+                "GDP data could not be retrieved from the World Bank or DBnomics."
+            ) from dbnomics_error
+
 
 if __name__ == "__main__":
     df = get_gdp("JPN")
@@ -61,7 +105,7 @@ if __name__ == "__main__":
 def get_country_list() -> pd.DataFrame:
     """Download the country list from the World Bank API."""
     url = "https://api.worldbank.org/v2/country?format=json&per_page=400"
-    json_data = _get_json(url)
+    json_data = _get_json(url, "The World Bank API", WorldBankAPIError)
 
     codes = []
     names = []
