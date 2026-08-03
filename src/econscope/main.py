@@ -1,3 +1,7 @@
+import pandas as pd
+from api import get_country_list
+from visualize import plot_gdp
+
 VERSION = "0.1.0"
 
 def print_welcome() -> None:
@@ -16,8 +20,6 @@ def print_welcome() -> None:
     print("  • CO₂ Emissions")
     print()
 
-    print("Select a region:")
-    print()
 
 REGIONS = {
     1: "East Asia & Pacific",
@@ -51,10 +53,25 @@ def select_region() -> str | None:
 
     return REGIONS[choice]
 
+def select_country(countries: pd.DataFrame, region: str) -> str:
+    """Ask the user to select a country from a region."""
+
+    region_df = countries[countries["region"] == region]
+    print(f"\nCountries in {region}:\n")
+    for _, row in region_df.iterrows():
+        print(f'{row["country_code"]:<5} {row["country_name"]}')
+    country = input("\nEnter country code: ").upper()
+
+    return country
+
 def main():
     print_welcome()
-    choice = select_region()
-    print(f"You selected: {choice}")
+    region = select_region()
+    if region is None:
+        return
+    countries = get_country_list()
+    country = select_country(countries, region)
+    plot_gdp(country)
 
 if __name__ == "__main__":
     main()

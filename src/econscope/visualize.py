@@ -1,3 +1,6 @@
+import matplotlib.pyplot as plt
+from api import get_gdp
+
 def plot_gdp(country: str) -> None:
     df = get_gdp(country)
 
