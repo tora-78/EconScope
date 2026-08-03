@@ -38,38 +38,49 @@ def _get_json(
     ) from last_error
 
 
-def _gdp_dataframe(years: list[object], values: list[object]) -> pd.DataFrame:
-    """Convert aligned year and GDP-value lists to the app's common format."""
+def _indicator_dataframe(
+    years: list[object], values: list[object], value_column: str
+) -> pd.DataFrame:
+    """Convert aligned indicator observations to the app's common format."""
     df = pd.DataFrame(
-        zip(years, values, strict=True), columns=["year", "GDP"]
+        zip(years, values, strict=True), columns=["year", value_column]
     )
     # DBnomics may encode missing observations as strings such as "NA".
     # Matplotlib requires one numeric dtype rather than a mix of strings/floats.
     df["year"] = pd.to_numeric(df["year"], errors="coerce")
-    df["GDP"] = pd.to_numeric(df["GDP"], errors="coerce")
-    return df.dropna(subset=["year", "GDP"]).astype({"year": int}).sort_values("year")
+    df[value_column] = pd.to_numeric(df[value_column], errors="coerce")
+    return (
+        df.dropna(subset=["year", value_column])
+        .astype({"year": int})
+        .sort_values("year")
+    )
 
 
-def get_gdp_from_world_bank(country: str) -> pd.DataFrame:
-    """Download GDP time series from the World Bank API."""
+def _get_indicator_from_world_bank(
+    country: str, indicator_code: str, value_column: str
+) -> pd.DataFrame:
+    """Download a World Bank indicator time series."""
     url = (
-    f"https://api.worldbank.org/v2/country/"
-    f"{country}/indicator/NY.GDP.MKTP.CD"
-    "?format=json&per_page=100"
+        f"https://api.worldbank.org/v2/country/{country}/indicator/{indicator_code}"
+        "?format=json&per_page=100"
     )
     json_data = _get_json(url, "The World Bank API", WorldBankAPIError)
     if len(json_data) < 2 or not isinstance(json_data[1], list):
-        raise WorldBankAPIError(f"No GDP data is available for country code {country}.")
+        raise WorldBankAPIError(
+            f"No {value_column} data is available for country code {country}."
+        )
     years = [record["date"] for record in json_data[1]]
-    gdps = [record["value"] for record in json_data[1]]
-    return _gdp_dataframe(years, gdps)
+    values = [record["value"] for record in json_data[1]]
+    return _indicator_dataframe(years, values, value_column)
 
 
-def get_gdp_from_dbnomics(country: str) -> pd.DataFrame:
-    """Download the same WDI GDP series through DBnomics as a fallback."""
+def _get_indicator_from_dbnomics(
+    country: str, indicator_code: str, value_column: str
+) -> pd.DataFrame:
+    """Download a WDI indicator through DBnomics as a fallback."""
     url = (
         "https://api.db.nomics.world/v22/series/WB/WDI/"
-        f"A-NY.GDP.MKTP.CD-{country}?observations=1"
+        f"A-{indicator_code}-{country}?observations=1"
     )
     json_data = _get_json(url, "The DBnomics API")
 
@@ -79,23 +90,33 @@ def get_gdp_from_dbnomics(country: str) -> pd.DataFrame:
         gdps = series["value"]
     except (KeyError, IndexError, TypeError) as error:
         raise DataSourceError(
-            f"No fallback GDP data is available for country code {country}."
+            f"No fallback {value_column} data is available for country code {country}."
         ) from error
 
-    return _gdp_dataframe(years, gdps)
+    return _indicator_dataframe(years, gdps, value_column)
+
+
+def _get_indicator(country: str, indicator_code: str, value_column: str) -> pd.DataFrame:
+    """Download an indicator, falling back to DBnomics if World Bank fails."""
+    try:
+        return _get_indicator_from_world_bank(country, indicator_code, value_column)
+    except WorldBankAPIError:
+        try:
+            return _get_indicator_from_dbnomics(country, indicator_code, value_column)
+        except DataSourceError as error:
+            raise DataSourceError(
+                f"{value_column} data could not be retrieved from the World Bank or DBnomics."
+            ) from error
 
 
 def get_gdp(country: str) -> pd.DataFrame:
-    """Download GDP, falling back to DBnomics if the World Bank API fails."""
-    try:
-        return get_gdp_from_world_bank(country)
-    except WorldBankAPIError as world_bank_error:
-        try:
-            return get_gdp_from_dbnomics(country)
-        except DataSourceError as dbnomics_error:
-            raise DataSourceError(
-                "GDP data could not be retrieved from the World Bank or DBnomics."
-            ) from dbnomics_error
+    """Download GDP (current US$) time series."""
+    return _get_indicator(country, "NY.GDP.MKTP.CD", "GDP")
+
+
+def get_population(country: str) -> pd.DataFrame:
+    """Download total population time series."""
+    return _get_indicator(country, "SP.POP.TOTL", "Population")
 
 
 if __name__ == "__main__":

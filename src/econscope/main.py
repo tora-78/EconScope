@@ -1,6 +1,6 @@
 import pandas as pd
 from api import DataSourceError, get_country_list
-from visualize import plot_gdp
+from visualize import plot_gdp, plot_population
 
 VERSION = "0.1.0"
 
@@ -16,8 +16,6 @@ def print_welcome() -> None:
     print("Available indicators include:")
     print("  • GDP")
     print("  • Population")
-    print("  • Life Expectancy")
-    print("  • CO₂ Emissions")
     print()
 
 
@@ -30,6 +28,29 @@ REGIONS = {
     6: "South Asia",
     7: "Sub-Saharan Africa",
 }
+
+INDICATORS = {
+    "1": ("GDP", plot_gdp),
+    "2": ("Population", plot_population),
+}
+
+
+def select_indicator() -> tuple[str, object] | None:
+    """Ask the user which indicator to view."""
+    while True:
+        print("""
+        Select an indicator
+
+        1. GDP
+        2. Population
+        0. Exit
+        """)
+        choice = input("Enter your choice: ")
+        if choice == "0":
+            return None
+        if choice in INDICATORS:
+            return INDICATORS[choice]
+        print("\nInvalid indicator number. Please try again.\n")
 
 def select_region() -> str | None:
     """Ask the user to select a World Bank region."""
@@ -74,6 +95,11 @@ def main():
     print_welcome()
 
     while True:
+        indicator = select_indicator()
+        if indicator is None:
+            print("\nThank you for using EconScope. Goodbye!")
+            break
+        indicator_name, plot_indicator = indicator
         region = select_region()
         if region is None:
             print("\nThank you for using EconScope. Goodbye!")
@@ -84,13 +110,13 @@ def main():
             print(f"\nUnable to load the country list: {error}\n")
             continue
         country = select_country(countries, region)
-        print("\nDownloading data and generating the GDP chart...")
+        print(f"\nDownloading data and generating the {indicator_name} chart...")
         try:
-            plot_gdp(country)
-        except DataSourceError as error:
-            print(f"\nUnable to generate the GDP chart: {error}\n")
+            plot_indicator(country)
+        except (DataSourceError, ValueError) as error:
+            print(f"\nUnable to generate the {indicator_name} chart: {error}\n")
             continue
-        print("\n✓ GDP trend chart generated successfully!")
+        print(f"\n✓ {indicator_name} trend chart generated successfully!")
         print("""
         What would you like to do next?
 
