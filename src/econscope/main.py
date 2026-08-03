@@ -1,5 +1,5 @@
 import pandas as pd
-from api import get_country_list
+from api import WorldBankAPIError, get_country_list
 from visualize import plot_gdp
 
 VERSION = "0.1.0"
@@ -49,7 +49,7 @@ def select_region() -> str | None:
         """)
 
         choice = input("Enter your choice: ")
-        if choice == 0:
+        if choice == "0":
             return None
         if choice.isdigit() and int(choice) in REGIONS:
             return REGIONS[int(choice)]
@@ -78,10 +78,18 @@ def main():
         if region is None:
             print("\nThank you for using EconScope. Goodbye!")
             break
-        countries = get_country_list()
+        try:
+            countries = get_country_list()
+        except WorldBankAPIError as error:
+            print(f"\nUnable to load the country list: {error}\n")
+            continue
         country = select_country(countries, region)
         print("\nDownloading data and generating the GDP chart...")
-        plot_gdp(country)
+        try:
+            plot_gdp(country)
+        except WorldBankAPIError as error:
+            print(f"\nUnable to generate the GDP chart: {error}\n")
+            continue
         print("\n✓ GDP trend chart generated successfully!")
         print("""
         What would you like to do next?
