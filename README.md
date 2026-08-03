@@ -32,7 +32,7 @@ uv sync
 Run the application with:
 
 ```bash
-uv run econscope
+uv run src/econscope/main.py
 ```
 
 The program first asks which indicator to display, then guides you through region and country selection:
