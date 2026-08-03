@@ -11,9 +11,20 @@ def get_gdp(country: str) -> pd.DataFrame:
     )
     response = requests.get(url)
     response.raise_for_status()
-    data = response.json()
-    for record in data[1]:
-        print(record["date"],record["value"])
+    json_data = response.json()
+    years = []
+    gdps = []
+    for record in json_data[1]:
+        years.append(int(record["date"]))
+        gdps.append(record["value"])
+        if record["value"] is None:
+            continue
+    df = pd.DataFrame({
+        "year": years,
+        "GDP": gdps
+    })
+    return df
 
 if __name__ == "__main__":
-    get_gdp("JPN")
+    df = get_gdp("JPN")
+    print(df)
