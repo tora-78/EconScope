@@ -1,6 +1,7 @@
 import pandas as pd
 from api import DataSourceError, get_country_list
-from visualize import plot_gdp, plot_population
+from indicators import INDICATORS, Indicator
+from visualize import plot_indicator
 
 VERSION = "0.1.0"
 
@@ -29,20 +30,17 @@ REGIONS = {
     7: "Sub-Saharan Africa",
 }
 
-INDICATORS = {
-    "1": ("GDP", plot_gdp),
-    "2": ("Population", plot_population),
-}
-
-
-def select_indicator() -> tuple[str, object] | None:
+def select_indicator() -> Indicator | None:
     """Ask the user which indicator to view."""
     while True:
-        print("""
+        options = "\n".join(
+            f"        {choice}. {indicator.name}"
+            for choice, indicator in INDICATORS.items()
+        )
+        print(f"""
         Select an indicator
 
-        1. GDP
-        2. Population
+{options}
         0. Exit
         """)
         choice = input("Enter your choice: ")
@@ -99,7 +97,6 @@ def main():
         if indicator is None:
             print("\nThank you for using EconScope. Goodbye!")
             break
-        indicator_name, plot_indicator = indicator
         region = select_region()
         if region is None:
             print("\nThank you for using EconScope. Goodbye!")
@@ -110,13 +107,13 @@ def main():
             print(f"\nUnable to load the country list: {error}\n")
             continue
         country = select_country(countries, region)
-        print(f"\nDownloading data and generating the {indicator_name} chart...")
+        print(f"\nDownloading data and generating the {indicator.name} chart...")
         try:
-            plot_indicator(country)
+            plot_indicator(country, indicator)
         except (DataSourceError, ValueError) as error:
-            print(f"\nUnable to generate the {indicator_name} chart: {error}\n")
+            print(f"\nUnable to generate the {indicator.name} chart: {error}\n")
             continue
-        print(f"\n✓ {indicator_name} trend chart generated successfully!")
+        print(f"\n✓ {indicator.name} trend chart generated successfully!")
         print("""
         What would you like to do next?
 

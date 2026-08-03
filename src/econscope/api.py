@@ -96,7 +96,9 @@ def _get_indicator_from_dbnomics(
     return _indicator_dataframe(years, gdps, value_column)
 
 
-def _get_indicator(country: str, indicator_code: str, value_column: str) -> pd.DataFrame:
+def get_indicator_data(
+    country: str, indicator_code: str, value_column: str
+) -> pd.DataFrame:
     """Download an indicator, falling back to DBnomics if World Bank fails."""
     try:
         return _get_indicator_from_world_bank(country, indicator_code, value_column)
@@ -107,20 +109,8 @@ def _get_indicator(country: str, indicator_code: str, value_column: str) -> pd.D
             raise DataSourceError(
                 f"{value_column} data could not be retrieved from the World Bank or DBnomics."
             ) from error
-
-
-def get_gdp(country: str) -> pd.DataFrame:
-    """Download GDP (current US$) time series."""
-    return _get_indicator(country, "NY.GDP.MKTP.CD", "GDP")
-
-
-def get_population(country: str) -> pd.DataFrame:
-    """Download total population time series."""
-    return _get_indicator(country, "SP.POP.TOTL", "Population")
-
-
 if __name__ == "__main__":
-    df = get_gdp("JPN")
+    df = get_indicator_data("JPN", "NY.GDP.MKTP.CD", "GDP")
     print(df)
 
 def get_country_list() -> pd.DataFrame:
