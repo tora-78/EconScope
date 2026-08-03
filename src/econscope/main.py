@@ -19,21 +19,42 @@ def print_welcome() -> None:
     print("Select a region:")
     print()
 
-    print("1. Africa")
-    print("2. Asia")
-    print("3. Europe")
-    print("4. North America")
-    print("5. South America")
-    print("6. Oceania")
-    print("7. Show all countries")
-    print("0. Exit")
+REGIONS = {
+    1: "East Asia & Pacific",
+    2: "Europe & Central Asia",
+    3: "Latin America & Caribbean",
+    4: "Middle East, North Africa, Afghanistan & Pakistan",
+    5: "North America",
+    6: "South Asia",
+    7: "Sub-Saharan Africa",
+}
 
-    choice = input("\nEnter your choice: ")
+def select_region() -> str | None:
+    """Ask the user to select a World Bank region."""
 
-    print(choice)
+    print("""
+    Select a World Bank Region
+
+    1. East Asia & Pacific
+    2. Europe & Central Asia
+    3. Latin America & Caribbean
+    4. Middle East, North Africa, Afghanistan & Pakistan
+    5. North America
+    6. South Asia
+    7. Sub-Saharan Africa
+    0. Exit
+    """)
+
+    choice = int(input("Enter your choice: "))
+    if choice == 0:
+        return None
+
+    return REGIONS[choice]
 
 def main():
     print_welcome()
+    choice = select_region()
+    print(f"You selected: {choice}")
 
 if __name__ == "__main__":
     main()
