@@ -33,7 +33,7 @@ if __name__ == "__main__":
 def get_country_list() -> pd.DataFrame:
     """Download the country list from the World Bank API."""
     url = "https://api.worldbank.org/v2/country?format=json&per_page=400"
-    response = requests.get(url)
+    response = requests.get(url, timeout=10)
     response.raise_for_status()
     json_data = response.json()
 
