@@ -21,6 +21,7 @@ def plot_indicator(country: str, indicator: Indicator) -> None:
 
     plt.grid(True)
     plt.tight_layout()
+    plt.savefig("gdp.png")
     plt.show()
 
 
